@@ -1,17 +1,8 @@
-import { AccountType, TransactionType, MessageRole, AlertType } from '../generated/prisma/enums.js';
+import { AccountType, TransactionType, MessageRole, AlertType } from '../src/generated/prisma/enums.js';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
-import { PrismaClient } from '../generated/prisma/client.js';
-
-function parseMysqlUrl(url: string) {
-  const parsed = new URL(url);
-  return {
-    host: parsed.hostname,
-    port: parsed.port ? Number(parsed.port) : 3306,
-    user: decodeURIComponent(parsed.username),
-    password: decodeURIComponent(parsed.password),
-    database: parsed.pathname.replace(/^\//, ''),
-  };
-}
+import { PrismaClient } from '../src/generated/prisma/client.js';
+import { parseMysqlUrl } from '../src/infrastructure/prisma/parse-mysql-url.util.js';
+import { hashPassword } from '../src/common/utils/password.util.js';
 
 const adapter = new PrismaMariaDb(parseMysqlUrl(process.env.DATABASE_URL!));
 const prisma = new PrismaClient({ adapter });
@@ -90,14 +81,14 @@ async function main() {
   // ---------------------------------------------------
   console.log('👤 Creando usuarios...');
 
-  // NOTA: en un entorno real, estas contraseñas deben ir hasheadas
-  // (bcrypt/argon2) antes de insertarse. Aquí van como placeholder
-  // de texto plano únicamente para datos de prueba.
+  const SEED_PASSWORD = 'password123';
+  const hashedPassword = await hashPassword(SEED_PASSWORD);
+
   const user1 = await prisma.user.create({
     data: {
       name: 'Juan Pérez',
       userName: 'jperez',
-      password: 'hashed_password_placeholder_1',
+      password: hashedPassword,
       phone: '+52 81 1234 5678',
       isActive: true,
     },
@@ -107,7 +98,7 @@ async function main() {
     data: {
       name: 'María López',
       userName: 'mlopez',
-      password: 'hashed_password_placeholder_2',
+      password: hashedPassword,
       phone: '+52 81 8765 4321',
       isActive: true,
     },
@@ -535,8 +526,8 @@ async function main() {
   });
 
   console.log('✅ Seed completado con éxito.');
-  console.log(`   Usuario 1: ${user1.userName} (id: ${user1.id})`);
-  console.log(`   Usuario 2: ${user2.userName} (id: ${user2.id})`);
+  console.log(`   Usuario 1: ${user1.userName} (id: ${user1.id}) — password: ${SEED_PASSWORD}`);
+  console.log(`   Usuario 2: ${user2.userName} (id: ${user2.id}) — password: ${SEED_PASSWORD}`);
 }
 
 main()

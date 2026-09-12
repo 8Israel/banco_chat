@@ -1,0 +1,247 @@
+// This is your Prisma schema file.
+// Learn more about it in the docs:
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output       = "../generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+// =====================================================
+// ENUMS
+// =====================================================
+
+enum AccountType {
+  DEBIT
+  CREDIT
+  CASH
+  SAVINGS
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+enum AlertType {
+  BUDGET_WARNING
+  BUDGET_EXCEEDED
+  LOW_BALANCE
+  SAVINGS_GOAL
+  GENERAL
+}
+
+// =====================================================
+// USERS
+// =====================================================
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  userName  String   @unique @map("user_name")
+  password  String
+  phone     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  accounts      Account[]
+  sessionAgents SessionAgent[]
+
+  @@map("users")
+}
+
+// =====================================================
+// ACCOUNTS
+// =====================================================
+
+model Account {
+  id             Int         @id @default(autoincrement())
+  userId         Int         @map("user_id")
+  typeAccount    AccountType @map("type_account")
+  alias          String?
+  last4Digits    String?     @map("last_4_digits")
+  currentBalance Decimal     @default(0) @map("current_balance")
+  isActive       Boolean     @default(true) @map("is_active")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  user         User              @relation(fields: [userId], references: [id])
+  transactions BankTransaction[]
+  budgets      Budget[]
+  savingsGoals SavingsGoal[]
+  alerts       Alert[]
+
+  transfersFrom Transfer[] @relation("TransferFrom")
+  transfersTo   Transfer[] @relation("TransferTo")
+
+  @@index([userId])
+  @@map("accounts")
+}
+
+// =====================================================
+// CATEGORIES
+// =====================================================
+
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  icon      String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  transactions BankTransaction[]
+  budgets      Budget[]
+
+  @@map("categories")
+}
+
+// =====================================================
+// BANK TRANSACTIONS
+// =====================================================
+
+model BankTransaction {
+  id          Int             @id @default(autoincrement())
+  accountId   Int             @map("account_id")
+  categoryId  Int             @map("category_id")
+  type        TransactionType
+  amount      Decimal
+  description String?
+  date        DateTime
+  createdAt   DateTime        @default(now()) @map("created_at")
+
+  account  Account  @relation(fields: [accountId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@index([accountId])
+  @@index([categoryId])
+  @@index([date])
+  @@index([accountId, date])
+  @@map("bank_transactions")
+}
+
+// =====================================================
+// TRANSFERS
+// =====================================================
+
+model Transfer {
+  id            Int      @id @default(autoincrement())
+  fromAccountId Int      @map("from_account_id")
+  toAccountId   Int      @map("to_account_id")
+  amount        Decimal
+  description   String?
+  date          DateTime
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  fromAccount Account @relation("TransferFrom", fields: [fromAccountId], references: [id])
+  toAccount Account @relation("TransferTo", fields: [toAccountId], references: [id])
+
+  @@index([fromAccountId])
+  @@index([toAccountId])
+  @@index([date])
+  @@map("transfers")
+}
+
+// =====================================================
+// BUDGETS
+// =====================================================
+
+model Budget {
+  id          Int      @id @default(autoincrement())
+  accountId   Int      @map("account_id")
+  categoryId  Int      @map("category_id")
+  limitAmount Decimal  @map("limit_amount")
+  startPeriod DateTime @map("start_period")
+  endPeriod   DateTime @map("end_period")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  account  Account  @relation(fields: [accountId], references: [id])
+  category Category @relation(fields: [categoryId], references: [id])
+
+  @@index([accountId, categoryId])
+  @@index([startPeriod, endPeriod])
+  @@map("budgets")
+}
+
+// =====================================================
+// SAVINGS GOALS
+// =====================================================
+
+model SavingsGoal {
+  id           Int      @id @default(autoincrement())
+  accountId    Int      @map("account_id")
+  name         String
+  targetAmount Decimal  @map("target_amount")
+  actualAmount Decimal  @default(0) @map("actual_amount")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@map("savings_goals")
+}
+
+// =====================================================
+// ALERTS
+// =====================================================
+
+model Alert {
+  id          Int       @id @default(autoincrement())
+  accountId   Int       @map("account_id")
+  type        AlertType
+  description String?
+  isRead      Boolean   @default(false) @map("is_read")
+  triggeredAt DateTime? @map("triggered_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@index([isRead])
+  @@map("alerts")
+}
+
+// =====================================================
+// AI / AGENT SESSIONS
+// =====================================================
+
+model SessionAgent {
+  id         Int       @id @default(autoincrement())
+  userId     Int       @map("user_id")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  finishedAt DateTime? @map("finished_at")
+
+  user     User      @relation(fields: [userId], references: [id])
+  messages Message[]
+
+  @@index([userId])
+  @@map("session_agents")
+}
+
+// =====================================================
+// AI MESSAGES
+// =====================================================
+
+model Message {
+  id        Int         @id @default(autoincrement())
+  sessionId Int         @map("session_id")
+  role      MessageRole
+  content   String
+  uiSchema  Json?       @map("ui_schema")
+  createdAt DateTime    @default(now()) @map("created_at")
+  readAt    DateTime?   @map("read_at")
+
+  session SessionAgent @relation(fields: [sessionId], references: [id])
+
+  @@index([sessionId])
+  @@index([createdAt])
+  @@map("messages")
+}

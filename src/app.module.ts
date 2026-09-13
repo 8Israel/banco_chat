@@ -14,6 +14,7 @@ import { TransformResponseInterceptor } from './core/interceptors/transform-resp
 import { JwtAuthGuard } from './core/guards/jwt-auth.guard.js';
 import { AccountsModule } from './modules/accounts/accounts.module.js';
 import { CategoriesModule } from './modules/categories/categories.module.js';
+import { BankTransactionModule } from './modules/bank-transaction/bank-transaction.module.js';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { CategoriesModule } from './modules/categories/categories.module.js';
     CardsModule,
     AccountsModule,
     CategoriesModule,
+    BankTransactionModule,
   ],
   controllers: [AppController],
   providers: [

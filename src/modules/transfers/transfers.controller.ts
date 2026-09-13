@@ -1,34 +1,31 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Post } from '@nestjs/common';
 import { TransfersService } from './transfers.service.js';
 import { CreateTransferDto } from './dto/create-transfer.dto.js';
-import { UpdateTransferDto } from './dto/update-transfer.dto.js';
+import { CurrentUser, type AuthenticatedUser } from '../../core/decorators/current-user.decorator.js';
+import { ResponseMessage } from '../../core/decorators/response-message.decorator.js';
 
 @Controller('transfers')
 export class TransfersController {
-  constructor(private readonly transfersService: TransfersService) {}
+    constructor(private readonly transfersService: TransfersService) { }
 
-  @Post()
-  create(@Body() createTransferDto: CreateTransferDto) {
-    return this.transfersService.create(createTransferDto);
-  }
+    @Post()
+    @ResponseMessage('Transferencia realizada')
+    create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateTransferDto) {
+        return this.transfersService.create(user.id, dto);
+    }
 
-  @Get()
-  findAll() {
-    return this.transfersService.findAll();
-  }
+    @Get()
+    @ResponseMessage('Transferencias obtenidas')
+    findAll(@CurrentUser() user: AuthenticatedUser) {
+        return this.transfersService.findAllForUser(user.id);
+    }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.transfersService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTransferDto: UpdateTransferDto) {
-    return this.transfersService.update(+id, updateTransferDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.transfersService.remove(+id);
-  }
+    @Get(':id')
+    @ResponseMessage('Transferencia obtenida')
+    findOne(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('id', ParseIntPipe) id: number,
+    ) {
+        return this.transfersService.findOne(user.id, id);
+    }
 }

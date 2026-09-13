@@ -1,35 +1,51 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseIntPipe, Patch, Post } from '@nestjs/common';
 import { SavingsGoalsService } from './savings-goals.service.js';
 import { CreateSavingsGoalDto } from './dto/create-savings-goal.dto.js';
 import { UpdateSavingsGoalDto } from './dto/update-savings-goal.dto.js';
-import { CurrentUser } from '../../core/decorators/current-user.decorator.js';
+import { ContributeSavingsGoalDto } from './dto/contribute-savings-goal.dto.js';
+import { CurrentUser, type AuthenticatedUser } from '../../core/decorators/current-user.decorator.js';
+import { ResponseMessage } from '../../core/decorators/response-message.decorator.js';
 
-@Controller('savings-goals')
+@Controller()
 export class SavingsGoalsController {
-  constructor(private readonly savingsGoalsService: SavingsGoalsService) {}
+    constructor(private readonly savingsGoalsService: SavingsGoalsService) { }
 
-  @Post()
-  create(@Body() createSavingsGoalDto: CreateSavingsGoalDto) {
-    return this.savingsGoalsService.create(createSavingsGoalDto);
-  }
+    @Get('accounts/:accountId/savings-goals')
+    @ResponseMessage('Metas de ahorro obtenidas')
+    findAllForAccount(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('accountId', ParseIntPipe) accountId: number,
+    ) {
+        return this.savingsGoalsService.findAllForAccount(user.id, accountId);
+    }
 
-  @Get()
-  findAll() {
-    return this.savingsGoalsService.findAll();
-  }
+    @Post('accounts/:accountId/savings-goals')
+    @ResponseMessage('Meta de ahorro creada')
+    create(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('accountId', ParseIntPipe) accountId: number,
+        @Body() dto: CreateSavingsGoalDto,
+    ) {
+        return this.savingsGoalsService.create(user.id, accountId, dto);
+    }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.savingsGoalsService.findOne(+id);
-  }
+    @Patch('savings-goals/:id')
+    @ResponseMessage('Meta de ahorro actualizada')
+    update(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateSavingsGoalDto,
+    ) {
+        return this.savingsGoalsService.update(user.id, id, dto);
+    }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateSavingsGoalDto: UpdateSavingsGoalDto, @CurrentUser('id') userId:number) {
-    return this.savingsGoalsService.update(+id, userId, updateSavingsGoalDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.savingsGoalsService.remove(+id);
-  }
+    @Post('savings-goals/:id/contribute')
+    @ResponseMessage('Aportación registrada')
+    contribute(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: ContributeSavingsGoalDto,
+    ) {
+        return this.savingsGoalsService.contribute(user.id, id, dto.amount);
+    }
 }

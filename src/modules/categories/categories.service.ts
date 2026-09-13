@@ -1,26 +1,20 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { CreateCategoryDto } from "./dto/create-category.dto.js";
-import { UpdateCategoryDto } from "./dto/update-category.dto.js";
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+import { CategoryNotFoundError } from '../../common/errors/app-errors.js';
 
 @Injectable()
 export class CategoriesService {
+    constructor(private readonly prisma: PrismaService) { }
 
-  constructor(private readonly prisma: PrismaService) {}
-  
-  findAll() {
-    return this.prisma.category.findMany();
-  }
-
-  findOne(id: number) {
-    const category = this.prisma.category.findUnique({
-      where: {
-        id: id
-      }
-    });
-    if (!category) {
-      throw new NotFoundException(`Categoría no existente`);
+    async findAll() {
+        return this.prisma.category.findMany({ orderBy: { name: 'asc' } });
     }
-    return category;
-  }
+
+    async findById(id: number) {
+        const category = await this.prisma.category.findUnique({ where: { id } });
+        if (!category) {
+            throw new CategoryNotFoundError();
+        }
+        return category;
+    }
 }

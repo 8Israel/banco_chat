@@ -1,4 +1,4 @@
-import { AccountType, TransactionType, MessageRole, AlertType } from '../src/generated/prisma/enums.js';
+import { AccountType, TransactionType, AlertType } from '../src/generated/prisma/enums.js';
 import { PrismaMariaDb } from '@prisma/adapter-mariadb';
 import { PrismaClient } from '../src/generated/prisma/client.js';
 import { parseMysqlUrl } from '../src/infrastructure/prisma/parse-mysql-url.util.js';
@@ -182,7 +182,7 @@ async function main() {
   const mariaAccounts = [mariaChecking, mariaCredit, mariaSavings];
 
   // ---------------------------------------------------
-  // TRANSACCIONES BANCARIAS (últimos 6 meses)
+  // TRANSACCIONES BANCARIAS (últimos 12 meses)
   // ---------------------------------------------------
   console.log('💸 Creando transacciones...');
 
@@ -245,46 +245,51 @@ async function main() {
     await prisma.bankTransaction.createMany({ data: txs });
   }
 
-  await generateTransactions(juanAccounts, 6, 10); // ~66 transacciones
-  await generateTransactions(mariaAccounts, 6, 8); // ~54 transacciones
+  await generateTransactions(juanAccounts, 12, 22); // ~276 transacciones (12 meses)
+  await generateTransactions(mariaAccounts, 12, 18); // ~228 transacciones (12 meses)
 
   // ---------------------------------------------------
   // TRANSFERENCIAS
   // ---------------------------------------------------
   console.log('🔁 Creando transferencias...');
 
-  await prisma.transfer.createMany({
-    data: [
-      {
-        fromAccountId: juanChecking.id,
-        toAccountId: juanSavings.id,
-        amount: 5000,
-        description: 'Transferencia a ahorro mensual',
-        date: daysAgo(15),
-      },
-      {
+  const transfers: {
+    fromAccountId: number;
+    toAccountId: number;
+    amount: number;
+    description: string;
+    date: Date;
+  }[] = [];
+
+  for (let month = 0; month < 12; month++) {
+    transfers.push({
+      fromAccountId: juanChecking.id,
+      toAccountId: juanSavings.id,
+      amount: randomAmount(2000, 6000),
+      description: 'Transferencia a ahorro mensual',
+      date: daysAgo(month * 30 + randomInt(1, 5)),
+    });
+
+    if (month % 2 === 0) {
+      transfers.push({
         fromAccountId: juanChecking.id,
         toAccountId: juanCash.id,
-        amount: 800,
+        amount: randomAmount(300, 1200),
         description: 'Retiro de efectivo',
-        date: daysAgo(7),
-      },
-      {
-        fromAccountId: mariaChecking.id,
-        toAccountId: mariaSavings.id,
-        amount: 7500,
-        description: 'Aportación fondo de emergencia',
-        date: daysAgo(20),
-      },
-      {
-        fromAccountId: mariaChecking.id,
-        toAccountId: mariaSavings.id,
-        amount: 3000,
-        description: 'Aportación extra',
-        date: daysAgo(45),
-      },
-    ],
-  });
+        date: daysAgo(month * 30 + randomInt(10, 20)),
+      });
+    }
+
+    transfers.push({
+      fromAccountId: mariaChecking.id,
+      toAccountId: mariaSavings.id,
+      amount: randomAmount(1500, 7500),
+      description: pick(['Aportación fondo de emergencia', 'Aportación extra', 'Ahorro programado']),
+      date: daysAgo(month * 30 + randomInt(1, 25)),
+    });
+  }
+
+  await prisma.transfer.createMany({ data: transfers });
 
   // ---------------------------------------------------
   // PRESUPUESTOS
@@ -295,49 +300,38 @@ async function main() {
   const entretenimiento = categories.find((c) => c.name === 'Entretenimiento')!;
   const restaurantes = categories.find((c) => c.name === 'Restaurantes')!;
   const ropa = categories.find((c) => c.name === 'Ropa')!;
+  const transporte = categories.find((c) => c.name === 'Transporte')!;
+  const servicios = categories.find((c) => c.name === 'Servicios')!;
 
-  const startPeriod = daysAgo(30);
-  const endPeriod = new Date();
+  const budgets: {
+    accountId: number;
+    categoryId: number;
+    limitAmount: number;
+    startPeriod: Date;
+    endPeriod: Date;
+  }[] = [];
 
-  await prisma.budget.createMany({
-    data: [
-      {
-        accountId: juanChecking.id,
-        categoryId: alimentacion.id,
-        limitAmount: 6000,
-        startPeriod,
-        endPeriod,
-      },
-      {
-        accountId: juanCredit.id,
-        categoryId: entretenimiento.id,
-        limitAmount: 1500,
-        startPeriod,
-        endPeriod,
-      },
-      {
-        accountId: mariaChecking.id,
-        categoryId: alimentacion.id,
-        limitAmount: 5500,
-        startPeriod,
-        endPeriod,
-      },
-      {
-        accountId: mariaCredit.id,
-        categoryId: ropa.id,
-        limitAmount: 2000,
-        startPeriod,
-        endPeriod,
-      },
-      {
-        accountId: mariaCredit.id,
-        categoryId: restaurantes.id,
-        limitAmount: 1800,
-        startPeriod,
-        endPeriod,
-      },
-    ],
-  });
+  function monthlyPeriod(monthsBack: number): { startPeriod: Date; endPeriod: Date } {
+    const endPeriod = daysAgo(monthsBack * 30);
+    const startPeriod = daysAgo(monthsBack * 30 + 30);
+    return { startPeriod, endPeriod };
+  }
+
+  for (let month = 0; month < 6; month++) {
+    const { startPeriod, endPeriod } = monthlyPeriod(month);
+
+    budgets.push(
+      { accountId: juanChecking.id, categoryId: alimentacion.id, limitAmount: randomAmount(5500, 6500), startPeriod, endPeriod },
+      { accountId: juanCredit.id, categoryId: entretenimiento.id, limitAmount: randomAmount(1200, 1800), startPeriod, endPeriod },
+      { accountId: juanCredit.id, categoryId: transporte.id, limitAmount: randomAmount(1500, 2500), startPeriod, endPeriod },
+      { accountId: mariaChecking.id, categoryId: alimentacion.id, limitAmount: randomAmount(5000, 6000), startPeriod, endPeriod },
+      { accountId: mariaCredit.id, categoryId: ropa.id, limitAmount: randomAmount(1800, 2500), startPeriod, endPeriod },
+      { accountId: mariaCredit.id, categoryId: restaurantes.id, limitAmount: randomAmount(1500, 2200), startPeriod, endPeriod },
+      { accountId: mariaChecking.id, categoryId: servicios.id, limitAmount: randomAmount(1000, 1800), startPeriod, endPeriod },
+    );
+  }
+
+  await prisma.budget.createMany({ data: budgets });
 
   // ---------------------------------------------------
   // METAS DE AHORRO
@@ -359,10 +353,22 @@ async function main() {
         actualAmount: 6200,
       },
       {
+        accountId: juanSavings.id,
+        name: 'Fondo para laptop nueva',
+        targetAmount: 25000,
+        actualAmount: 9800,
+      },
+      {
         accountId: mariaSavings.id,
         name: 'Fondo de emergencia (6 meses)',
         targetAmount: 90000,
         actualAmount: 60500,
+      },
+      {
+        accountId: mariaSavings.id,
+        name: 'Remodelación cocina',
+        targetAmount: 45000,
+        actualAmount: 12500,
       },
     ],
   });
@@ -396,6 +402,27 @@ async function main() {
         triggeredAt: daysAgo(1),
       },
       {
+        accountId: juanCredit.id,
+        type: AlertType.BUDGET_EXCEEDED,
+        description: 'Superaste el presupuesto de Transporte hace 2 meses',
+        isRead: true,
+        triggeredAt: daysAgo(65),
+      },
+      {
+        accountId: juanChecking.id,
+        type: AlertType.GENERAL,
+        description: 'Tu resumen mensual de finanzas ya está disponible',
+        isRead: true,
+        triggeredAt: daysAgo(95),
+      },
+      {
+        accountId: juanSavings.id,
+        type: AlertType.SAVINGS_GOAL,
+        description: 'Nueva meta creada: "Fondo para laptop nueva"',
+        isRead: true,
+        triggeredAt: daysAgo(120),
+      },
+      {
         accountId: mariaCredit.id,
         type: AlertType.BUDGET_EXCEEDED,
         description: 'Superaste el presupuesto de Ropa este mes',
@@ -409,125 +436,40 @@ async function main() {
         isRead: true,
         triggeredAt: daysAgo(14),
       },
+      {
+        accountId: mariaChecking.id,
+        type: AlertType.LOW_BALANCE,
+        description: 'Saldo bajo detectado tras pagos de servicios',
+        isRead: true,
+        triggeredAt: daysAgo(50),
+      },
+      {
+        accountId: mariaSavings.id,
+        type: AlertType.SAVINGS_GOAL,
+        description: 'Vas al 27% de tu meta "Remodelación cocina"',
+        isRead: false,
+        triggeredAt: daysAgo(8),
+      },
+      {
+        accountId: mariaCredit.id,
+        type: AlertType.BUDGET_WARNING,
+        description: 'Estás cerca del límite de presupuesto en Restaurantes (78%)',
+        isRead: true,
+        triggeredAt: daysAgo(80),
+      },
     ],
   });
 
   // ---------------------------------------------------
-  // SESIONES DE AGENTE + MENSAJES (para probar LLM/MCP)
+  // Nota: session_agents y messages NO se siembran aquí.
+  // Esas tablas se llenan orgánicamente con el uso real del chat/agente.
   // ---------------------------------------------------
-  console.log('🤖 Creando sesiones de agente y mensajes...');
-
-  const juanSession1 = await prisma.sessionAgent.create({
-    data: {
-      userId: user1.id,
-      createdAt: daysAgo(5),
-      finishedAt: daysAgo(5),
-    },
-  });
-
-  await prisma.message.createMany({
-    data: [
-      {
-        sessionId: juanSession1.id,
-        role: MessageRole.USER,
-        content: '¿Cuánto he gastado en restaurantes este mes?',
-        createdAt: daysAgo(5),
-        readAt: daysAgo(5),
-      },
-      {
-        sessionId: juanSession1.id,
-        role: MessageRole.ASSISTANT,
-        content: 'Voy a consultar tus transacciones de la categoría Restaurantes de este mes.',
-        createdAt: daysAgo(5),
-        readAt: daysAgo(5),
-      },
-      {
-        sessionId: juanSession1.id,
-        role: MessageRole.TOOL,
-        content: JSON.stringify({ tool: 'get_transactions_by_category', category: 'Restaurantes', total: 1240.5 }),
-        createdAt: daysAgo(5),
-        readAt: daysAgo(5),
-      },
-      {
-        sessionId: juanSession1.id,
-        role: MessageRole.ASSISTANT,
-        content: 'Has gastado $1,240.50 MXN en restaurantes este mes, distribuidos en 6 transacciones.',
-        uiSchema: { type: 'summary_card', value: 1240.5, currency: 'MXN' },
-        createdAt: daysAgo(5),
-        readAt: daysAgo(5),
-      },
-    ],
-  });
-
-  const juanSession2 = await prisma.sessionAgent.create({
-    data: {
-      userId: user1.id,
-      createdAt: daysAgo(1),
-    },
-  });
-
-  await prisma.message.createMany({
-    data: [
-      {
-        sessionId: juanSession2.id,
-        role: MessageRole.USER,
-        content: '¿Voy bien con mi meta de ahorro para el auto?',
-        createdAt: daysAgo(1),
-      },
-      {
-        sessionId: juanSession2.id,
-        role: MessageRole.ASSISTANT,
-        content: 'Llevas $42,000 de $80,000, es decir 52.5% de tu meta "Enganche de auto". Vas por buen camino.',
-        createdAt: daysAgo(1),
-      },
-    ],
-  });
-
-  const mariaSession1 = await prisma.sessionAgent.create({
-    data: {
-      userId: user2.id,
-      createdAt: daysAgo(2),
-      finishedAt: daysAgo(2),
-    },
-  });
-
-  await prisma.message.createMany({
-    data: [
-      {
-        sessionId: mariaSession1.id,
-        role: MessageRole.USER,
-        content: 'Dame un resumen de mis finanzas del último mes',
-        createdAt: daysAgo(2),
-        readAt: daysAgo(2),
-      },
-      {
-        sessionId: mariaSession1.id,
-        role: MessageRole.ASSISTANT,
-        content: 'Claro, dame un momento para revisar tus cuentas y transacciones.',
-        createdAt: daysAgo(2),
-        readAt: daysAgo(2),
-      },
-      {
-        sessionId: mariaSession1.id,
-        role: MessageRole.TOOL,
-        content: JSON.stringify({ tool: 'get_monthly_summary', income: 22000, expenses: 15300, savings: 7500 }),
-        createdAt: daysAgo(2),
-        readAt: daysAgo(2),
-      },
-      {
-        sessionId: mariaSession1.id,
-        role: MessageRole.ASSISTANT,
-        content: 'Este mes tuviste ingresos de $22,000, gastos de $15,300 y ahorraste $7,500. ¡Buen balance!',
-        uiSchema: { type: 'balance_chart', income: 22000, expenses: 15300, savings: 7500 },
-        createdAt: daysAgo(2),
-        readAt: daysAgo(2),
-      },
-    ],
-  });
 
   console.log('✅ Seed completado con éxito.');
-  console.log(`   Usuario 1: ${user1.userName} (id: ${user1.id}) — password: ${SEED_PASSWORD}`);
-  console.log(`   Usuario 2: ${user2.userName} (id: ${user2.id}) — password: ${SEED_PASSWORD}`);
+  console.log('');
+  console.log('🔑 Credenciales de acceso:');
+  console.log(`   Usuario 1 -> userName: ${user1.userName}  |  password: ${SEED_PASSWORD}  (id: ${user1.id})`);
+  console.log(`   Usuario 2 -> userName: ${user2.userName}  |  password: ${SEED_PASSWORD}  (id: ${user2.id})`);
 }
 
 main()

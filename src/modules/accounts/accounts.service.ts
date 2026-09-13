@@ -1,84 +1,35 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
-import { CreateAccountDto } from "./dto/create-account.dto.js";
-import { UpdateAccountDto } from "./dto/update-account.dto.js";
-import { PrismaService } from "../../infrastructure/prisma/prisma.service.js";
+import { Injectable } from '@nestjs/common';
+import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+import { UpdateAccountDto } from './dto/update-account.dto.js';
+import { AccountNotFoundError } from '../../common/errors/app-errors.js';
 
 @Injectable()
 export class AccountsService {
+    constructor(private readonly prisma: PrismaService) { }
 
-  constructor(private readonly prisma: PrismaService) {}
-
-  async create(userId: number, createCardDto: CreateAccountDto) {
-    return await this.prisma.account.create({
-      data: {
-        typeAccount: createCardDto.typeAccount,
-        alias: createCardDto.alias,
-        last4Digits: createCardDto.last4Digits,
-        isActive: createCardDto.isActive,
-        userId: userId,
-        currentBalance: 0,
-      },
-    });
-  }
-
-  async findAll(userId: number) {
-    const cards = await this.prisma.account.findMany({
-      where: {
-        userId: userId,
-      },
-    });
-    return cards;
-  }
-
-  async findOne(userId: number, id: number) {
-    const card = await this.prisma.account.findUnique({
-      where: {
-        id: id,
-        userId: userId,
-      },
-    });
-    if (!card) {
-      throw new NotFoundException(`Cuenta no existente`);
+    async findAllForUser(userId: number) {
+        return this.prisma.account.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'asc' },
+        });
     }
-    return card;
-  }
 
-  async update(userId: number, id: number, updateCardDto: UpdateAccountDto) {
-    const existingCard = await this.prisma.account.findUnique({
-      where: {
-        id: id,
-        userId: userId,
-      },
-    });
-    if (!existingCard) {
-      throw new NotFoundException(`Cuenta no existente`);
+    // Punto de entrada de ownership que reutilizan transactions/transfers/budgets/savings-goals:
+    // si la cuenta no existe o es de otro usuario, se lanza NotFoundError (nunca ForbiddenError)
+    // para no confirmarle a nadie que el recurso existe pero no es suyo.
+    async findOwnedAccount(userId: number, accountId: number) {
+        const account = await this.prisma.account.findUnique({ where: { id: accountId } });
+        if (!account || account.userId !== userId) {
+            throw new AccountNotFoundError();
+        }
+        return account;
     }
-    return await this.prisma.account.update({
-      where: {
-        id: id,
-        userId: userId,
-      },
-      data: {
-        alias: updateCardDto.alias,
-        isActive: updateCardDto.isActive,
-      },
-    });
-  }
 
-  remove(userId: number, id: number) {
-    const account = this.prisma.account.findUnique({
-      where: {
-        id: id,
-        userId: userId,
-      },
-    });
-    if (!account) {
-      throw new NotFoundException(`Cuenta no existente`);
+    async update(userId: number, accountId: number, dto: UpdateAccountDto) {
+        await this.findOwnedAccount(userId, accountId);
+        return this.prisma.account.update({
+            where: { id: accountId },
+            data: dto,
+        });
     }
-    return this.prisma.account.delete({
-      where: {
-        id: id,
-      },
-    });
-  }
 }

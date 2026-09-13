@@ -23,7 +23,27 @@
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+Backend (NestJS + Prisma/MySQL) del reto Banorte x Tec de Monterrey "Interfaces que la IA construye en tiempo real". El agente (Claude o Gemini, configurable) interpreta la intención del usuario, usa herramientas expuestas por un servidor **MCP real** para consultar y modificar datos bancarios, y le devuelve al frontend tanto texto como un componente **A2UI** para que la interfaz se genere según la intención detectada. El frontend (Angular) vive en un repo aparte; ver `docs/a2ui-contract.md` para el contrato entre ambos.
+
+### Arquitectura: LLM + MCP + A2UI
+
+```
+Usuario → POST /chat/sessions/:id/messages
+              ↓
+        ChatService — orquesta el loop con el LLM (src/modules/chat/chat.service.ts)
+              ↓
+        LLM (Claude/Gemini) — decide qué tool llamar y cuándo terminar
+              ↓
+        McpClientService → McpServerProvider (src/modules/chat/mcp/)
+              ↓
+        AccountsService / SavingsGoalsService (capa bancaria real, Prisma)
+              ↓
+        Respuesta = texto + uiSchema (A2UI) cuando una tool generó un componente
+```
+
+- **MCP real**: `McpServerProvider` registra las tools con el SDK oficial (`@modelcontextprotocol/sdk`); `McpClientService` las consume vía protocolo MCP genuino (JSON-RPC, `listTools`/`callTool`) usando un `InMemoryTransport.createLinkedPair()` — mismo proceso por simplicidad del hackathon, pero es un cambio acotado moverlo a `StdioServerTransport`/un proceso separado si se quiere demostrar un servidor MCP independiente.
+- **A2UI**: el esquema de componentes que el agente puede pedir renderizar vive en `src/modules/chat/ui/ui-component.types.ts` y se persiste en `Message.uiSchema`. El bookkeeping interno del protocolo tool-use/tool-result (necesario para reconstruir el historial hacia el LLM, pero irrelevante para el frontend) vive aparte, en `Message.toolData`.
+- **Flujo accionable de referencia**: "Meta de ahorro" — `simulate_savings_plan` (simulación pura) → confirmación del usuario en el chat → `create_savings_goal` (escribe en la DB real) → `contribute_savings_goal` (aporta a la meta). La interacción con la UI generada no dispara un endpoint aparte: el frontend reenvía un mensaje de confirmación al chat, y es el LLM quien decide ejecutar la acción — así el ciclo se cierra sin saltarse al agente.
 
 ## Project setup
 

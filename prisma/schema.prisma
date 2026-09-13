@@ -150,7 +150,12 @@ model Message {
   id        Int          @id @default(autoincrement())
   sessionId Int          @map("session_id")
   role      MessageRole
-  content   String
+  content   String       @db.Text
+  // Bookkeeping interno del protocolo tool-use/tool-result hacia el proveedor
+  // LLM (Claude/Gemini) - no es UI. Ver chat.service.ts.
+  toolData  Json?        @map("tool_data")
+  // A2UI: el componente que el agente le pide renderizar al frontend para
+  // este mensaje (si lo hay). Ver src/modules/chat/ui/ui-component.types.ts.
   uiSchema  Json?        @map("ui_schema")
   createdAt DateTime     @default(now()) @map("created_at")
   readAt    DateTime?    @map("read_at")

@@ -12,7 +12,7 @@ export const ErrorCodes = {
   FORBIDDEN: {
     FORBIDDEN: 'FORBIDDEN',
     ACCOUNT_INACTIVE: 'ACCOUNT_INACTIVE',
-  },
+  },  
 
   // ========== VALIDACIÓN (400) ==========
   VALIDATION: {

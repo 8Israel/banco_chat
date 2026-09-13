@@ -1,62 +1,35 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  HttpStatus,
-  HttpCode,
-} from "@nestjs/common";
-import { AccountsService } from "./accounts.service.js";
-import { CreateAccountDto } from "./dto/create-account.dto.js";
-import { UpdateAccountDto } from "./dto/update-account.dto.js";
-import { ResponseMessage } from "../../core/decorators/response-message.decorator.js";
-import { Public } from "../../core/decorators/public.decorator.js";
+import { Body, Controller, Get, Param, ParseIntPipe, Patch } from '@nestjs/common';
+import { AccountsService } from './accounts.service.js';
+import { UpdateAccountDto } from './dto/update-account.dto.js';
 import { CurrentUser, type AuthenticatedUser } from '../../core/decorators/current-user.decorator.js';
+import { ResponseMessage } from '../../core/decorators/response-message.decorator.js';
 
-@Controller("accounts")
+@Controller('accounts')
 export class AccountsController {
-  constructor(private readonly accountsService: AccountsService) {}
+    constructor(private readonly accountsService: AccountsService) { }
 
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage("Cuenta registrada")
-  @Post()
-  async create(@Body() createAccountDto: CreateAccountDto, @CurrentUser() user: AuthenticatedUser) {
-    return await this.accountsService.create(user.id, createAccountDto);
-  }
+    @Get()
+    @ResponseMessage('Cuentas obtenidas')
+    findAll(@CurrentUser() user: AuthenticatedUser) {
+        return this.accountsService.findAllForUser(user.id);
+    }
 
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage("Cuentas encontradas")
-  @Get()
-  findAll(@CurrentUser() user: AuthenticatedUser) {
-    return this.accountsService.findAll(user.id);
-  }
+    @Get(':id')
+    @ResponseMessage('Cuenta obtenida')
+    findOne(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('id', ParseIntPipe) id: number,
+    ) {
+        return this.accountsService.findOwnedAccount(user.id, id);
+    }
 
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage("Cuenta encontrada")
-  @Get(":id")
-  findOne(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.accountsService.findOne(user.id, +id);
-  }
-
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage("Cuenta actualizada")
-  @Patch(":id")
-  update(@Param("id") id: string, @Body() updateAccountDto: UpdateAccountDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.accountsService.update(user.id, +id, updateAccountDto);
-  }
-
-  @Public()
-  @HttpCode(HttpStatus.OK)
-  @ResponseMessage("Cuenta eliminada")
-  @Delete(":id")
-  remove(@Param("id") id: string, @CurrentUser() user: AuthenticatedUser) {
-    return this.accountsService.remove(user.id, +id);
-  }
+    @Patch(':id')
+    @ResponseMessage('Cuenta actualizada')
+    update(
+        @CurrentUser() user: AuthenticatedUser,
+        @Param('id', ParseIntPipe) id: number,
+        @Body() dto: UpdateAccountDto,
+    ) {
+        return this.accountsService.update(user.id, id, dto);
+    }
 }

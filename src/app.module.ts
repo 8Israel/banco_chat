@@ -13,6 +13,7 @@ import { LoggingInterceptor } from './core/interceptors/logging.interceptor.js';
 import { TransformResponseInterceptor } from './core/interceptors/transform-response.interceptor.js';
 import { JwtAuthGuard } from './core/guards/jwt-auth.guard.js';
 import { AccountsModule } from './modules/accounts/accounts.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { AccountsModule } from './modules/accounts/accounts.module.js';
     AuthModule,
     CardsModule,
     AccountsModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [

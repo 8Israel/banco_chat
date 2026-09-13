@@ -12,7 +12,11 @@ import { AccountType } from '../../../generated/prisma/enums.js';
 
 describe('McpClientService (real MCP server, in-memory transport)', () => {
     let mcpClient: McpClientService;
-    let accountsService: { findAllForUser: ReturnType<typeof vi.fn>; findOwnedAccount: ReturnType<typeof vi.fn> };
+    let accountsService: {
+        findAllForUser: ReturnType<typeof vi.fn>;
+        findOwnedAccount: ReturnType<typeof vi.fn>;
+        create: ReturnType<typeof vi.fn>;
+    };
     let budgetsService: { findOwnedBudget: ReturnType<typeof vi.fn>; getStatus: ReturnType<typeof vi.fn> };
     let transfersService: { create: ReturnType<typeof vi.fn> };
     let categoriesService: { findAll: ReturnType<typeof vi.fn>; findById: ReturnType<typeof vi.fn> };
@@ -21,6 +25,7 @@ describe('McpClientService (real MCP server, in-memory transport)', () => {
         accountsService = {
             findAllForUser: vi.fn(),
             findOwnedAccount: vi.fn(),
+            create: vi.fn(),
         };
         budgetsService = {
             findOwnedBudget: vi.fn(),

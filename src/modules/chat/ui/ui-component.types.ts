@@ -73,6 +73,7 @@ export interface TransferCardProps {
 }
 
 export type UiComponent =
+    | { component: 'AccountCard'; props: AccountCardProps }
     | { component: 'AccountsList'; props: { accounts: AccountCardProps[] } }
     | { component: 'SavingsPlanSimulator'; props: { targetAmount: number; options: SavingsPlanOption[] } }
     | { component: 'SavingsGoalCard'; props: SavingsGoalCardProps }

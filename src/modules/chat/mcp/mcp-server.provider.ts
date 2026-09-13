@@ -174,6 +174,31 @@ export class McpServerProvider {
                 return textResult(cards, { component: 'AccountsList', props: { accounts: cards } });
             },
         );
+
+        this.server.registerTool(
+            'create_account',
+            {
+                description:
+                    'Da de alta una cuenta bancaria real y nueva para el usuario (débito, crédito, efectivo o ahorro). Requiere confirmación previa del usuario antes de ejecutarse.',
+                inputSchema: {
+                    ...userIdField,
+                    typeAccount: z.enum(['DEBIT', 'CREDIT', 'CASH', 'SAVINGS']),
+                    alias: z.string().max(100).optional(),
+                    last4Digits: z.string().max(4).optional(),
+                    currentBalance: z.number().optional(),
+                },
+            },
+            async ({ userId, typeAccount, alias, last4Digits, currentBalance }) => {
+                const account = await this.accountsService.create(userId, {
+                    typeAccount,
+                    alias,
+                    last4Digits,
+                    currentBalance,
+                });
+                const card = toAccountCard(account);
+                return textResult(card, { component: 'AccountCard', props: card });
+            },
+        );
     }
 
     private registerCategoryTools() {

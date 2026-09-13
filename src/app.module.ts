@@ -12,6 +12,8 @@ import { HttpExceptionFilter } from './core/filters/http-exception.filter.js';
 import { LoggingInterceptor } from './core/interceptors/logging.interceptor.js';
 import { TransformResponseInterceptor } from './core/interceptors/transform-response.interceptor.js';
 import { JwtAuthGuard } from './core/guards/jwt-auth.guard.js';
+import { AccountsModule } from './modules/accounts/accounts.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
 
 @Module({
   imports: [
@@ -23,6 +25,8 @@ import { JwtAuthGuard } from './core/guards/jwt-auth.guard.js';
     PrismaModule,
     AuthModule,
     CardsModule,
+    AccountsModule,
+    CategoriesModule,
   ],
   controllers: [AppController],
   providers: [

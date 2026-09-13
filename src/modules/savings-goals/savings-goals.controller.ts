@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/commo
 import { SavingsGoalsService } from './savings-goals.service.js';
 import { CreateSavingsGoalDto } from './dto/create-savings-goal.dto.js';
 import { UpdateSavingsGoalDto } from './dto/update-savings-goal.dto.js';
+import { CurrentUser } from '../../core/decorators/current-user.decorator.js';
 
 @Controller('savings-goals')
 export class SavingsGoalsController {
@@ -23,8 +24,8 @@ export class SavingsGoalsController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateSavingsGoalDto: UpdateSavingsGoalDto) {
-    return this.savingsGoalsService.update(+id, updateSavingsGoalDto);
+  update(@Param('id') id: string, @Body() updateSavingsGoalDto: UpdateSavingsGoalDto, @CurrentUser('id') userId:number) {
+    return this.savingsGoalsService.update(+id, userId, updateSavingsGoalDto);
   }
 
   @Delete(':id')

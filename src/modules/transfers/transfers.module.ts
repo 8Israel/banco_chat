@@ -1,0 +1,12 @@
+import { Module } from '@nestjs/common';
+import { TransfersService } from './transfers.service.js';
+import { TransfersController } from './transfers.controller.js';
+import { AccountsModule } from '../accounts/accounts.module.js';
+
+@Module({
+    imports: [AccountsModule],
+    controllers: [TransfersController],
+    providers: [TransfersService],
+    exports: [TransfersService],
+})
+export class TransfersModule { }

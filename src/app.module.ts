@@ -3,8 +3,14 @@ import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { AppController } from './app.controller.js';
 import { AppService } from './app.service.js';
-import { CardsModule } from './modules/cards/cards.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
+import { ChatModule } from './modules/chat/chat.module.js';
+import { AccountsModule } from './modules/accounts/accounts.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
+import { TransactionsModule } from './modules/transactions/transactions.module.js';
+import { TransfersModule } from './modules/transfers/transfers.module.js';
+import { BudgetsModule } from './modules/budgets/budgets.module.js';
+import { SavingsGoalsModule } from './modules/savings-goals/savings-goals.module.js';
 import { PrismaModule } from './infrastructure/prisma/prisma.module.js';
 import configuration from './config/configuration.js';
 import { validateEnv } from './config/env.validation.js';
@@ -22,7 +28,13 @@ import { JwtAuthGuard } from './core/guards/jwt-auth.guard.js';
     }),
     PrismaModule,
     AuthModule,
-    CardsModule,
+    ChatModule,
+    AccountsModule,
+    CategoriesModule,
+    TransactionsModule,
+    TransfersModule,
+    BudgetsModule,
+    SavingsGoalsModule,
   ],
   controllers: [AppController],
   providers: [

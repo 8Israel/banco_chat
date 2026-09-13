@@ -1,11 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../infrastructure/prisma/prisma.service.js';
+import { CreateAccountDto } from './dto/create-account.dto.js';
 import { UpdateAccountDto } from './dto/update-account.dto.js';
 import { AccountNotFoundError } from '../../common/errors/app-errors.js';
 
 @Injectable()
 export class AccountsService {
     constructor(private readonly prisma: PrismaService) { }
+
+    async create(userId: number, dto: CreateAccountDto) {
+        return this.prisma.account.create({
+            data: {
+                userId,
+                typeAccount: dto.typeAccount,
+                alias: dto.alias,
+                last4Digits: dto.last4Digits,
+                currentBalance: dto.currentBalance ?? 0,
+            },
+        });
+    }
 
     async findAllForUser(userId: number) {
         return this.prisma.account.findMany({

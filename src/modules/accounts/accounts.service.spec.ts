@@ -6,13 +6,16 @@ import { AccountNotFoundError } from '../../common/errors/app-errors.js';
 
 describe('AccountsService', () => {
     let service: AccountsService;
-    let prisma: { account: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn> } };
+    let prisma: {
+        account: { findUnique: ReturnType<typeof vi.fn>; update: ReturnType<typeof vi.fn>; create: ReturnType<typeof vi.fn> };
+    };
 
     beforeEach(async () => {
         prisma = {
             account: {
                 findUnique: vi.fn(),
                 update: vi.fn(),
+                create: vi.fn(),
             },
         };
 
@@ -45,5 +48,22 @@ describe('AccountsService', () => {
         prisma.account.findUnique.mockResolvedValue(null);
 
         await expect(service.findOwnedAccount(10, 1)).rejects.toBeInstanceOf(AccountNotFoundError);
+    });
+
+    it('creates a new account for the user, defaulting currentBalance to 0', async () => {
+        prisma.account.create.mockImplementation(({ data }) => Promise.resolve({ id: 30, ...data }));
+
+        const account = await service.create(10, { typeAccount: 'DEBIT' as never, alias: 'Nueva cuenta' });
+
+        expect(prisma.account.create).toHaveBeenCalledWith({
+            data: {
+                userId: 10,
+                typeAccount: 'DEBIT',
+                alias: 'Nueva cuenta',
+                last4Digits: undefined,
+                currentBalance: 0,
+            },
+        });
+        expect(account).toMatchObject({ id: 30, userId: 10, currentBalance: 0 });
     });
 });
